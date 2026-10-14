@@ -30,7 +30,7 @@ Ejecutar desde la raíz en PowerShell:
 .\.venv\Scripts\python.exe -m pip check
 ```
 
-Resultado del estado final de código: **127 passed in 6.53s**; Ruff check y format correctos; `pip check`: sin dependencias rotas.
+Resultado del estado final de código: **143 passed in 9.20s**; Ruff check y format correctos; `pip check`: sin dependencias rotas.
 
 La suite actual cubre:
 
@@ -84,7 +84,10 @@ Los nombres reflejan literalmente el snapshot histórico. Esta evidencia cubre e
 ## Pendientes que no deben declararse superados sin evidencia
 
 - Servicio Free [movieflix-marcm.onrender.com](https://movieflix-marcm.onrender.com): health HTTP 200 `ok`, arranque Linux y chat guiado en navegador comprobados. El test de modelo en la instancia verifica si cabe en sus 512 MB; no es una prueba de carga multiusuario.
-- En la revisión anterior, abrir predicción coincidió con timeout del health check y reinicio. No hubo señal explícita de OOM, por lo que no se atribuye una causa cerrada. La combinación candidata —bosque reducido, artefacto `mmap` y predicción aislada en subproceso— espera despliegue y QA públicos.
+- En la revisión anterior, abrir predicción coincidió con timeout del health check y reinicio. No hubo señal explícita de OOM, por lo que no se atribuye una causa cerrada. Corrección verificada en el servicio Free: la pantalla abre sin cargar sklearn en el proceso web; ambos clasificadores predicen en un subproceso con timeout y límite de concurrencia. Los resultados coinciden con local y health respondió 200 tras iniciar la predicción.
 - Chat con IA en Render: requiere una API propia de la allowlist y clave de sesión; un modelo local del PC no es accesible mediante `localhost` desde la nube.
 - Persistencia Render: requiere variante de pago, disco montado, secreto configurado y prueba guardar–reiniciar–recuperar.
 - Auditoría completa con lector de pantalla, carga multiusuario y controles de producción como cuentas, cuotas y trazabilidad.
+
+## Integridad de publicación
+El CSV se conserva byte por byte con `.gitattributes` (`-text`), evitando una falsa alerta por conversión CRLF/LF. SHA-256 del índice Git, catálogo local y metadatos de entrenamiento coinciden. El paquete excluye datos raw, sesiones, altas, logs y claves.

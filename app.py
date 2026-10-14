@@ -105,7 +105,9 @@ with st.sidebar:
     st.divider()
     st.caption(f"{len(frame):,} películas y series · {len(frame) - len(base)} altas manuales")
     st.caption("Kaggle · movie-flix")
-    if os.environ.get("RENDER", "").lower() == "true":
+    if os.environ.get("RENDER", "").lower() == "true" and os.environ.get(
+        "MOVIEFLIX_ADMIN_PASSWORD"
+    ):
         st.text_input("Contraseña de edición", type="password", key="edit_password")
     can_write, access_note = write_access(st.session_state.get("edit_password", ""))
     st.caption(access_note)

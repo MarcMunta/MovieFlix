@@ -106,7 +106,7 @@ El bosque limita cada árbol a 512 hojas por presupuesto operativo de Render Fre
 
 `render-persistent.yaml` añade un servicio de pago, disco `/var/data` y contraseña de edición para guardar altas. No es necesario para configurar el Chat con IA por sesión. El servicio Free [movieflix-marcm.onrender.com](https://movieflix-marcm.onrender.com) está desplegado y responde al health check público.
 
-En una revisión pública anterior, abrir la pestaña de predicción coincidió con timeout del health check y reinicio del servicio; Render no aportó una señal explícita de OOM. El artefacto reducido y una ejecución de predicción aislada en subproceso forman la corrección candidata. Quedan pendientes despliegue y QA públicos antes de declararla resuelta.
+En una revisión pública anterior, abrir la pestaña de predicción coincidió con timeout del health check y reinicio del servicio; Render no aportó una señal explícita de OOM. La corrección se verificó en Render: carga ligera de la pantalla, predicción de ambos modelos en subproceso, resultados iguales a local y health HTTP 200 después de iniciar la petición. El bosque reducido, `mmap` y un único worker con timeout mantienen la aplicación disponible. No es una prueba de carga multiusuario.
 
 ## Consultas IA comprobadas
 
@@ -151,3 +151,5 @@ La suite cubre datos, chat guiado, planificación IA, SQL de solo lectura, prove
 Las altas cloud fallan cerradas: solo se habilitan con `/var/data`, contraseña configurada y contraseña correcta. La configuración IA cloud restringe destinos a una lista HTTPS fija; endpoints personalizados y locales se reservan a ejecución local. No se aceptan modelos `joblib` subidos por usuarios. Las exportaciones neutralizan fórmulas CSV y los errores HTTP no incluyen credenciales. No publiques `.venv`, `storage`, `data/raw`, logs, `.env` ni claves.
 
 Una contraseña compartida no sustituye autenticación por usuario, auditoría, cuotas ni protección antiabuso. Si se expone el Chat con IA a internet, el operador también asume costes, privacidad y límites del proveedor elegido.
+
+Las diferencias de saltos de línea Windows/Linux se controlan con `.gitattributes`: `data/movies.csv` mantiene sus bytes y el hash de procedencia y entrenamiento en Git y Render.

@@ -15,6 +15,7 @@ def main() -> None:
     ]
     files += [
         ROOT / ".gitignore",
+        ROOT / ".gitattributes",
         ROOT / ".streamlit/config.toml",
         ROOT / "modelo.joblib",
         ROOT / "metrics.json",

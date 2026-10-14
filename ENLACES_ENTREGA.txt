@@ -1,0 +1,41 @@
+MOVIEFLIX - ACTIVIDAD STREAMLIT 14/10/2026
+
+REPOSITORIO PUBLICO (codigo, dataset preparado, modelos y documentacion)
+https://github.com/MarcMunta/MovieFlix
+
+APLICACION EN RENDER (plan gratuito)
+https://movieflix-marcm.onrender.com
+
+ARCHIVO TXT DESCARGABLE
+https://raw.githubusercontent.com/MarcMunta/MovieFlix/main/ENLACES_ENTREGA.txt
+
+DATASET ORIGINAL
+https://www.kaggle.com/datasets/manaswinsripatnala/movie-flix-dataset/data
+
+QUE INCLUYE
+- 21.349 registros de peliculas y series, de 1896 a 2016.
+- Chat guiado con preguntas sugeridas que cambian segun los resultados.
+- Chat con IA separado: utiliza un LLM existente conectado por API o servidor local.
+- Configuracion para OpenAI-compatible (llama.cpp, LM Studio, etc.), Ollama, Anthropic y Gemini.
+- Consultas SQL de solo lectura sobre una copia aislada del catalogo, con evidencia visible.
+- Catalogo con busqueda, filtros y descarga CSV.
+- Altas locales en SQLite: preparar ficha, revisar y confirmar. El original no se modifica.
+- Arbol de Decision y Random Forest para estimar el primer genero registrado.
+- Random Forest: 160 arboles, hasta 512 hojas por arbol; accuracy test 42,37%, F1 macro 0,1369.
+- Verificacion automatica: 143 pruebas superadas, Ruff y dependencias correctos.
+
+COMO PROBARLO
+1. En Render, abre Chat guiado y pulsa Primera fila: The Great Train Robbery (1903).
+2. Pregunta por la mas antigua: The Kiss (1896). Primera fila y mas antigua son criterios diferentes.
+3. En Modelo, escribe una sinopsis en ingles y pulsa Comparar predicciones.
+4. Para IA en Render, abre Configuracion e introduce tu propia API y modelo; la clave permanece solo en tu sesion.
+5. Para usar un modelo local y guardar peliculas, descarga/clona el repo y ejecuta Iniciar-MovieFlix.ps1 (Python 3.13). Consulta README.md.
+
+LIMITES
+Render Free puede tardar al despertar por inactividad. No incluye un LLM ni una clave API. El localhost de tu PC no es accesible desde Render; usa el modelo local ejecutando MovieFlix en ese PC.
+La configuracion cloud permite URLs publicas aprobadas; endpoints personalizados se conectan en local.
+Las altas persistentes funcionan en local. La demo gratuita en Render es de consulta; la variante con disco persistente es de pago y no se ha contratado.
+Se entrena Random Forest, no un LLM desde cero. La IA consulta el dataset con un modelo existente. La calidad de las respuestas depende del modelo y de los datos disponibles.
+El clasificador es educativo, con precision limitada. No hay presupuesto ni recaudacion en el dataset. El conjunto de test ya se consulto en revisiones anteriores; no es una nueva evaluacion ciega.
+
+Documentacion y reproduccion: README.md y docs/VERIFICACION.md en el repositorio.
