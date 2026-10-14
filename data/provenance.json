@@ -1,0 +1,36 @@
+{
+  "raw_rows": 21349,
+  "catalog_rows": 21349,
+  "removed_duplicate_ids": 0,
+  "raw_sha256": "69943e127f696c75f81388bf26c332c0a83780623838b866ef4334e16e55b9e6",
+  "catalog_sha256": "4a550cc32d2bdfac81d856720f7b858a5a04e424f05426e1add18af48afa0103",
+  "columns": [
+    "id",
+    "title",
+    "year",
+    "runtime",
+    "genres",
+    "plot",
+    "directors",
+    "cast",
+    "countries",
+    "languages",
+    "imdb_rating",
+    "imdb_votes",
+    "type",
+    "source",
+    "manual_rating"
+  ],
+  "dataset": "manaswinsripatnala/movie-flix-dataset",
+  "source_url": "https://www.kaggle.com/datasets/manaswinsripatnala/movie-flix-dataset",
+  "archive_sha256": "dea26588a9842946e15d0ac4e78e0809ca6b49a4f02bc6024f9112f506277e7e",
+  "license_reported_by_kaggle": "MIT",
+  "download_date": "2026-10-14",
+  "excluded": [
+    "users",
+    "sessions",
+    "comments",
+    "theaters",
+    "embedded_movies"
+  ]
+}

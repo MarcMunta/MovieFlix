@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: movieflix
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run app.py --server.port $PORT --server.address 0.0.0.0
+    healthCheckPath: /_stcore/health
+    envVars:
+      - key: MOVIEFLIX_MODE
+        value: cloud
+      - key: PYTHON_VERSION
+        value: 3.13.5
+# Demo gratuita: consultas, catálogo y predicción. Altas bloqueadas para evitar perder datos.
+# Para guardar altas con persistencia: usar render-persistent.yaml, previa aceptación del coste.

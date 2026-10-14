@@ -1,0 +1,22 @@
+# SERVICIO DE PAGO: no desplegar sin confirmar el coste con el propietario.
+services:
+  - type: web
+    name: movieflix
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run app.py --server.port $PORT --server.address 0.0.0.0
+    healthCheckPath: /_stcore/health
+    disk:
+      name: movieflix-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: MOVIEFLIX_MODE
+        value: cloud
+      - key: PYTHON_VERSION
+        value: 3.13.5
+      - key: MOVIEFLIX_DATA_DIR
+        value: /var/data
+      - key: MOVIEFLIX_ADMIN_PASSWORD
+        sync: false

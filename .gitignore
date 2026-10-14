@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.env*
+!.env.example
+.streamlit/secrets.toml
+data/raw/
+storage/
+tmp/
+dist/
+*.log
+docs/reference-page-*.png
+.impeccable/
+.codex/
+
