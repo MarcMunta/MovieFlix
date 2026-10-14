@@ -18,7 +18,6 @@ from model_providers import (
     is_loopback_url,
     validate_config,
 )
-from store import write_access
 
 ROOT = Path(__file__).resolve().parent
 CONFIG_PATH = Path(os.environ.get("MOVIEFLIX_DATA_DIR", ROOT / "storage")) / "model-config.json"
@@ -28,6 +27,36 @@ PROVIDER_LABELS = {
     "anthropic": "Anthropic Messages API",
     "gemini": "Google Gemini generateContent",
 }
+PUBLIC_API_BASE_URLS = {
+    "openai_compatible": {
+        "https://api.openai.com/v1",
+        "https://openrouter.ai/api/v1",
+        "https://api.groq.com/openai/v1",
+        "https://api.together.xyz/v1",
+    },
+    "anthropic": {"https://api.anthropic.com/v1"},
+    "gemini": {"https://generativelanguage.googleapis.com/v1beta"},
+    "ollama": set(),
+}
+
+
+def _local_settings() -> bool:
+    return (
+        os.environ.get("MOVIEFLIX_MODE", "cloud") == "local"
+        and os.environ.get("RENDER", "").lower() != "true"
+    )
+
+
+def _validate_destination(config: ModelConfig) -> None:
+    validate_config(config)
+    if (
+        not _local_settings()
+        and config.base_url.rstrip("/") not in PUBLIC_API_BASE_URLS[config.provider]
+    ):
+        raise ValueError(
+            "En la demo pública usa una de las URLs API indicadas. "
+            "Los servidores locales y endpoints personalizados se configuran al ejecutar la app en tu equipo."
+        )
 
 
 def _without_secret(config: ModelConfig) -> dict[str, str | int]:
@@ -114,12 +143,12 @@ def get_model_config() -> ModelConfig:
 
 
 def _configuration_access() -> tuple[bool, str]:
-    local = os.environ.get("MOVIEFLIX_MODE", "cloud") == "local"
-    on_render = os.environ.get("RENDER", "").lower() == "true"
-    if local and not on_render:
+    if _local_settings():
         return True, "Configuración local editable."
-    allowed, reason = write_access(st.session_state.get("edit_password", ""))
-    return allowed, reason
+    return (
+        True,
+        "Configuración solo para esta sesión; claves y preferencias no se guardan en Render.",
+    )
 
 
 def _candidate(
@@ -146,6 +175,15 @@ def render_model_settings() -> None:
         "OpenAI-compatible: /chat/completions · Ollama: /api/chat · "
         "Anthropic: /messages · Gemini: generateContent"
     )
+    if not _local_settings():
+        st.info(
+            "En Render conecta tu propia API pública. El localhost de tu ordenador solo funciona "
+            "cuando ejecutas MovieFlix en ese ordenador. La clave permanece en tu sesión."
+        )
+        st.write(
+            "URLs admitidas en Render: "
+            + ", ".join(sorted(url for urls in PUBLIC_API_BASE_URLS.values() for url in urls))
+        )
     st.info(f"Activo: {PROVIDER_LABELS[current.provider]} · {current.model} · {current.base_url}")
     if not can_edit:
         st.warning("La configuración pública solo puede cambiarla el administrador. " + access_note)
@@ -195,7 +233,7 @@ def render_model_settings() -> None:
         candidate = _candidate(
             current, provider, base_url, model, api_key, int(timeout), int(max_tokens)
         )
-        validate_config(candidate)
+        _validate_destination(candidate)
         with ModelClient(candidate) as client:
             models = client.list_models()
         if not models:
@@ -208,9 +246,15 @@ def render_model_settings() -> None:
     suffix = "…" if len(models) > 8 else ""
     st.success(f"Conexión correcta. Modelos detectados: {preview}{suffix}")
     if save_config:
-        _persist_config(candidate)
         st.session_state["model_config"] = candidate
+        if _local_settings():
+            try:
+                _persist_config(candidate)
+            except OSError:
+                st.warning(
+                    "Configuración activa en esta sesión; no se pudieron guardar las preferencias en disco."
+                )
         if candidate.model not in models:
             st.warning("Guardado, pero el modelo indicado no aparece en la lista del proveedor.")
         else:
-            st.success("Configuración guardada. La clave permanece solo en esta sesión.")
+            st.success("Configuración activa. La clave permanece solo en esta sesión.")

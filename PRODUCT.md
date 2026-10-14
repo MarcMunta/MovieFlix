@@ -12,7 +12,8 @@ Aplicación docente en español para estudiantes de IA/Big Data. Permite consult
 ## Reglas del producto
 
 - Ningún chat guarda por sí solo: preparar, revisar y confirmar son pasos separados.
-- Claves API solo en sesión; preferencias no secretas pueden persistir.
+- Claves API solo en sesión. Preferencias no secretas persisten de forma atómica solo en local; en Render tampoco se guardan.
+- La nube permite que cada usuario conecte una API propia de la lista pública permitida. Endpoints personalizados y localhost se reservan a ejecución local.
 - Cloud es de solo lectura por defecto. Escribir exige disco persistente y contraseña de administración.
 - MovieFlix conecta LLM existentes; no entrena uno desde cero.
 - Datos ausentes, resultados truncados y límites del modelo deben mostrarse con honestidad.
@@ -21,4 +22,4 @@ Aplicación docente en español para estudiantes de IA/Big Data. Permite consult
 
 Éxito significa consultas verificables, degradación al Chat guiado cuando falla el proveedor, altas locales persistentes, modelo reproducible y UI usable. El clasificador tiene valor didáctico y precisión limitada; no debe venderse como recomendador fiable.
 
-Repositorio público previsto: [github.com/MarcMunta/MovieFlix](https://github.com/MarcMunta/MovieFlix). Publicación GitHub, despliegue Render y persistencia cloud solo se consideran terminados después de verificarlos en sus destinos reales.
+Repositorio público confirmado: [github.com/MarcMunta/MovieFlix](https://github.com/MarcMunta/MovieFlix). [movieflix-marcm.onrender.com](https://movieflix-marcm.onrender.com) responde al health check público con HTTP 200. La persistencia cloud de pago no se ha desplegado.

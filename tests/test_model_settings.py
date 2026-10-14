@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 import model_providers
 import model_settings
 from model_providers import DEFAULT_BASE_URL, ModelConfig
@@ -73,19 +75,78 @@ def test_destination_change_never_forwards_existing_key():
     assert unchanged.api_key == "local-secret"
 
 
-def test_configuration_access_local_or_authenticated_cloud(monkeypatch):
-    monkeypatch.setattr(model_settings.st, "session_state", {"edit_password": "typed-password"})
+def test_configuration_access_local_or_session_only_cloud(monkeypatch):
     monkeypatch.setenv("MOVIEFLIX_MODE", "local")
     monkeypatch.delenv("RENDER", raising=False)
-    assert model_settings._configuration_access()[0]
+    allowed, note = model_settings._configuration_access()
+    assert allowed
+    assert "local editable" in note
 
-    seen = []
     monkeypatch.setenv("MOVIEFLIX_MODE", "cloud")
     monkeypatch.setenv("RENDER", "true")
-    monkeypatch.setattr(
-        model_settings,
-        "write_access",
-        lambda password: seen.append(password) or (password == "typed-password", "status"),
-    )
-    allowed, _ = model_settings._configuration_access()
-    assert allowed and seen == ["typed-password"]
+    allowed, note = model_settings._configuration_access()
+    assert allowed
+    assert "solo para esta sesión" in note
+    assert "no se guardan" in note
+
+
+@pytest.mark.parametrize(
+    "base_url",
+    [
+        "http://127.0.0.1:8091/v1",
+        "https://10.0.0.1/v1",
+        "https://models.example/v1",
+    ],
+    ids=["loopback", "private-address", "custom-https"],
+)
+def test_cloud_rejects_unapproved_model_destinations(monkeypatch, base_url):
+    monkeypatch.setenv("MOVIEFLIX_MODE", "cloud")
+    monkeypatch.setenv("RENDER", "true")
+    config = ModelConfig("openai_compatible", base_url, "test-model", "fake-test-key")
+
+    with pytest.raises(ValueError, match="demo pública"):
+        model_settings._validate_destination(config)
+
+
+@pytest.mark.parametrize(
+    ("provider", "base_url"),
+    [
+        (provider, base_url)
+        for provider, urls in model_settings.PUBLIC_API_BASE_URLS.items()
+        for base_url in sorted(urls)
+    ],
+)
+def test_approved_remote_destinations_require_session_key(monkeypatch, provider, base_url):
+    monkeypatch.setenv("MOVIEFLIX_MODE", "cloud")
+    monkeypatch.setenv("RENDER", "true")
+    config = ModelConfig(provider, base_url, "test-model", "")
+
+    with pytest.raises(ValueError, match="requieren una clave API"):
+        model_settings._validate_destination(config)
+
+
+def test_render_never_counts_as_local_settings_even_when_mode_is_local(monkeypatch):
+    monkeypatch.setenv("MOVIEFLIX_MODE", "local")
+    monkeypatch.setenv("RENDER", "true")
+
+    assert model_settings._local_settings() is False
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
+        ModelConfig("openai_compatible", "http://127.0.0.1:9000/v1", "local-model", ""),
+        ModelConfig(
+            "openai_compatible",
+            "https://models.example/v1",
+            "remote-model",
+            "fake-test-key",
+        ),
+    ],
+    ids=["custom-loopback", "custom-https"],
+)
+def test_local_mode_allows_valid_custom_destinations(monkeypatch, config):
+    monkeypatch.setenv("MOVIEFLIX_MODE", "local")
+    monkeypatch.delenv("RENDER", raising=False)
+
+    model_settings._validate_destination(config)

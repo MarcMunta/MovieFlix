@@ -2,7 +2,7 @@
 
 Aplicación docente en español para explorar el dataset [movie-flix](https://www.kaggle.com/datasets/manaswinsripatnala/movie-flix-dataset), comparar un Árbol de Decisión con Random Forest y añadir películas sin modificar el CSV original. La arquitectura adapta el ejemplo [Sign-Detector-App-Stucom](https://github.com/Abel1002/Sign-Detector-App-Stucom) a Streamlit, scikit-learn, `joblib`, SQLite y Render.
 
-Repositorio público previsto: [github.com/MarcMunta/MovieFlix](https://github.com/MarcMunta/MovieFlix). Su publicación y el despliegue público deben considerarse pendientes hasta comprobarlos en sus URLs.
+Repositorio público: [github.com/MarcMunta/MovieFlix](https://github.com/MarcMunta/MovieFlix). Demo gratuita en [movieflix-marcm.onrender.com](https://movieflix-marcm.onrender.com). Health HTTP 200 y chat público comprobados; la IA requiere conectar tu modelo local o API propia.
 
 ## Funciones
 
@@ -47,9 +47,20 @@ Abre **Configuración**, elige protocolo, URL base y modelo, y prueba la conexi�
 - Ollama: protocolo Ollama y, normalmente, `http://127.0.0.1:11434`.
 - Anthropic o Gemini: endpoint HTTPS del proveedor y clave API.
 
-Las claves escritas en la interfaz se mantienen solo en la sesión de Streamlit y nunca se escriben en `model-config.json`. Ese archivo conserva únicamente proveedor, URL, nombre del modelo, timeout y límite de salida. Los endpoints remotos requieren HTTPS y clave; HTTP se acepta solo en loopback.
+Las claves escritas en la interfaz se mantienen solo en la sesión de Streamlit y nunca se escriben en `model-config.json`. En local, ese archivo conserva únicamente proveedor, URL, nombre del modelo, timeout y límite de salida mediante escritura atómica; si el disco falla, la configuración sigue activa en la sesión. En Render no se persisten ni claves ni preferencias.
 
 El valor local predeterminado apunta a `http://127.0.0.1:8091/v1`. Debe existir allí un servidor compatible para usar el Chat con IA; si no existe, el Chat guiado y el resto de la app siguen disponibles.
+
+En local se admiten endpoints personalizados válidos, incluidos llama.cpp, LM Studio y Ollama en loopback. En la demo pública, cada usuario puede conectar su propia API durante su sesión, pero solo mediante estas bases HTTPS permitidas para reducir riesgo SSRF:
+
+- OpenAI: `https://api.openai.com/v1`
+- OpenRouter: `https://openrouter.ai/api/v1`
+- Groq: `https://api.groq.com/openai/v1`
+- Together: `https://api.together.xyz/v1`
+- Anthropic: `https://api.anthropic.com/v1`
+- Gemini: `https://generativelanguage.googleapis.com/v1beta`
+
+La clave remota es obligatoria. Cambiar de destino no reutiliza la clave anterior.
 
 ## Cómo consulta los datos la IA
 
@@ -89,9 +100,20 @@ Random Forest mejora el acierto global, pero el rendimiento equilibrado por clas
 
 ## Render
 
-`render.yaml` define una demo Free en modo cloud y solo lectura. Chat guiado, catálogo y predicción no necesitan API. Chat con IA no funciona allí por defecto: el `localhost` de Render pertenece al contenedor y no puede alcanzar llama.cpp, LM Studio u Ollama ejecutados en el PC del usuario.
+`render.yaml` define una demo Free en modo cloud y solo lectura para las altas. Chat guiado, catálogo y predicción no necesitan API. Chat con IA no funciona con el valor local predeterminado: el `localhost` de Render pertenece al contenedor y no puede alcanzar llama.cpp, LM Studio u Ollama ejecutados en el PC. Cada usuario sí puede conectar durante su sesión una API pública de la lista permitida; su clave y preferencias no se persisten.
 
-`render-persistent.yaml` añade un servicio de pago, disco `/var/data` y contraseña de edición. Consulta [docs/RENDER.md](docs/RENDER.md) antes de desplegar. No se afirma que exista un despliegue funcional hasta validar una URL `onrender.com`.
+`render-persistent.yaml` añade un servicio de pago, disco `/var/data` y contraseña de edición para guardar altas. No es necesario para configurar el Chat con IA por sesión. El servicio Free [movieflix-marcm.onrender.com](https://movieflix-marcm.onrender.com) está desplegado y responde al health check público.
+
+## Consultas IA comprobadas
+
+Con el proveedor local conectado, el flujo planificador → SQL verificado → redactor respondió correctamente a casos concretos:
+
+- primera fila física: **The Great Train Robbery (1903)**; seguimiento de dirección: **Edwin S. Porter**;
+- película más antigua: **The Kiss (1896)**;
+- comedias entre 2000 y 2010: **2.487**, valoración IMDb media **6,281302774427**;
+- directores registrados de **The Matrix**: **Andy Wachowski; Lana Wachowski**.
+
+Estas pruebas demuestran esos casos sobre el snapshot incluido. No garantizan que cualquier pregunta o cualquier modelo produzca un plan válido; el comportamiento depende de calidad, compatibilidad y disponibilidad del proveedor.
 
 ## Verificación
 
@@ -122,6 +144,6 @@ La suite cubre datos, chat guiado, planificación IA, SQL de solo lectura, prove
 
 ## Seguridad y límites
 
-La configuración cloud falla cerrada: las escrituras solo se habilitan con `/var/data`, contraseña configurada y contraseña correcta. No se aceptan modelos `joblib` subidos por usuarios. Las exportaciones neutralizan fórmulas CSV y los errores HTTP no incluyen credenciales. No publiques `.venv`, `storage`, `data/raw`, logs, `.env` ni claves.
+Las altas cloud fallan cerradas: solo se habilitan con `/var/data`, contraseña configurada y contraseña correcta. La configuración IA cloud restringe destinos a una lista HTTPS fija; endpoints personalizados y locales se reservan a ejecución local. No se aceptan modelos `joblib` subidos por usuarios. Las exportaciones neutralizan fórmulas CSV y los errores HTTP no incluyen credenciales. No publiques `.venv`, `storage`, `data/raw`, logs, `.env` ni claves.
 
 Una contraseña compartida no sustituye autenticación por usuario, auditoría, cuotas ni protección antiabuso. Si se expone el Chat con IA a internet, el operador también asume costes, privacidad y límites del proveedor elegido.

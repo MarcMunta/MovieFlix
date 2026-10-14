@@ -17,7 +17,7 @@ import streamlit as st
 from analyst import AnalysisError, ask_dataset
 from assistant import respond
 from dataset import CATALOG_PATH, ROOT, export_csv, read_catalog
-from model_providers import ModelClient, ProviderError
+from model_providers import ModelClient, ProviderError, is_loopback_url
 from model_settings import get_model_config, render_model_settings
 from store import MovieStore, combined_catalog, validate_movie, write_access
 
@@ -131,6 +131,16 @@ elif page in {"Chat guiado", "Chat con IA"}:
     st.title("Explora con preguntas sugeridas" if guided else "Habla con tu catálogo")
     st.write("Consulta películas, estadísticas y prepara nuevas fichas.")
     config = None if guided else get_model_config()
+    needs_public_api = (
+        not guided
+        and os.environ.get("RENDER", "").lower() == "true"
+        and is_loopback_url(config.base_url)
+    )
+    if needs_public_api:
+        st.info(
+            "Abre Configuración para conectar tu propia API en esta sesión. "
+            "Para utilizar un modelo local, ejecuta MovieFlix en tu ordenador."
+        )
     st.caption(
         "Chat guiado · Consultas directas sin modelo ni API"
         if guided
@@ -178,6 +188,7 @@ elif page in {"Chat guiado", "Chat con IA"}:
     prompt = (
         st.chat_input(
             "Pregunta sobre el dataset…",
+            disabled=needs_public_api,
             key=f"{chat_key}_input",
             max_chars=3000,
             submit_mode="disable",
