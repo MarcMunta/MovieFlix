@@ -22,7 +22,8 @@ QUE INCLUYE
 - Altas locales en SQLite: preparar ficha, revisar y confirmar. El original no se modifica.
 - Arbol de Decision y Random Forest para estimar el primer genero registrado.
 - Random Forest: 160 arboles, hasta 512 hojas por arbol; accuracy test 42,37%, F1 macro 0,1369.
-- Verificacion automatica: 143 pruebas superadas, Ruff y dependencias correctos.
+- Verificacion automatica: 154 pruebas superadas, Ruff y dependencias correctos.
+- Perfil gratuito compartido Groq preparado mediante secreto de Render; activacion pendiente del acceso al proveedor. La clave nunca se publica.
 
 COMO PROBARLO
 1. En Render, abre Chat guiado y pulsa Primera fila: The Great Train Robbery (1903).

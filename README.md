@@ -60,7 +60,7 @@ En local se admiten endpoints personalizados válidos, incluidos llama.cpp, LM S
 - Anthropic: `https://api.anthropic.com/v1`
 - Gemini: `https://generativelanguage.googleapis.com/v1beta`
 
-La clave remota es obligatoria. Cambiar de destino no reutiliza la clave anterior.
+La clave remota es obligatoria. Cambiar de destino no reutiliza la clave anterior. El operador puede activar una API Groq gratuita compartida mediante un secreto de Render: consulta [docs/RENDER.md](docs/RENDER.md). Si está activada, Chat con IA funciona sin introducir clave. La clave del operador nunca se utiliza en perfiles personalizados; estos exigen una clave propia.
 
 ## Cómo consulta los datos la IA
 

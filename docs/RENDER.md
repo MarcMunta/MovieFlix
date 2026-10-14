@@ -14,7 +14,13 @@ streamlit run app.py --server.port $PORT --server.address 0.0.0.0
 
 La demo Free ofrece Chat guiado, catálogo, exportación y predicción. Las altas quedan bloqueadas porque el filesystem efímero perdería cambios. No necesita ninguna API para esas funciones.
 
-**Chat con IA no está conectado por defecto en Render Free.** La configuración inicial apunta a `127.0.0.1:8091`, que dentro de Render es el propio contenedor. Render no puede alcanzar llama.cpp, LM Studio u Ollama que estén en el `localhost` del ordenador del usuario. Tampoco se incluye un LLM en el servicio.
+**API compartida opcional:** el operador puede activar Groq Free configurando `MOVIEFLIX_LLM_API_KEY` únicamente en Environment de Render. Nunca se copia la clave al código, formulario público, TXT ni paquete. El modelo predeterminado es `openai/gpt-oss-120b`; destino fijo `https://api.groq.com/openai/v1`. `MOVIEFLIX_LLM_MODEL` admite también `openai/gpt-oss-20b` y `qwen/qwen3.8-27b`. No se activan planes de pago ni métodos de pago.
+
+Cuando existe esa variable, Chat con IA usa la API compartida automáticamente. Configuración muestra su disponibilidad y permite volver a ella mediante **Usar API de la demo**. Cambiar el perfil exige una clave propia, incluso para el mismo proveedor: nunca reutiliza la clave del operador.
+
+La demo compartida permite una consulta simultánea, dos intentos por minuto y treinta por día UTC, entre todos sus visitantes. Los intentos fallidos consumen cuota. Este contador vive en memoria y se reinicia al reiniciar el proceso; los límites de la cuenta Groq siguen siendo efectivos. Es una protección básica para la práctica, no un limitador distribuido. Consulta los [límites oficiales de Groq](https://console.groq.com/docs/rate-limits). Las preguntas y resultados del catálogo se transmiten a Groq; no introduzcas información privada.
+
+Sin secreto de servidor, cada usuario puede conectar su API propia. Render no puede alcanzar llama.cpp, LM Studio u Ollama en el `localhost` del ordenador del usuario. No se incluye un LLM en el contenedor.
 
 Cada usuario puede abrir **Configuración** y conectar durante su sesión una API propia. Clave, proveedor, modelo, URL y límites quedan solo en esa sesión; Render no los escribe en disco. Las URLs admitidas se muestran en la UI:
 
@@ -47,7 +53,7 @@ El disco limita el servicio a una instancia. SQLite usa transacciones y basta pa
 4. Abre Chat guiado y pregunta `¿Qué información tienes?`.
 5. Busca `Inception`, abre Modelo y ejecuta una predicción.
 6. Confirma que **Añadir película** informa que Render Free es de consulta.
-7. En Configuración, comprueba que cada URL pública admitida aparece y que localhost o un dominio personalizado se rechazan. Una prueba real de Chat con IA requiere una clave propia; no la pegues en logs, documentación ni capturas.
+7. Si existe secreto de servidor, abre Chat con IA sin introducir clave y comprueba una respuesta con evidencia SQL. En Configuración, cambia de proveedor y verifica que exige una clave propia; vuelve mediante Usar API de la demo. Sin secreto, la prueba requiere clave propia. No la pegues en logs, documentación ni capturas.
 
 Para la variante persistente, usa `render-persistent.yaml`, configura el secreto en Render y añade estas pruebas:
 

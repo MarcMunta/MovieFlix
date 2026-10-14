@@ -38,6 +38,20 @@ PUBLIC_API_BASE_URLS = {
     "gemini": {"https://generativelanguage.googleapis.com/v1beta"},
     "ollama": set(),
 }
+SERVER_PROVIDER = "openai_compatible"
+SERVER_BASE_URL = "https://api.groq.com/openai/v1"
+SERVER_MODELS = {
+    "qwen/qwen3.8-27b",
+    "openai/gpt-oss-120b",
+    "openai/gpt-oss-20b",
+}
+SERVER_DEFAULT_MODEL = "openai/gpt-oss-120b"
+SERVER_ENV_NAMES = {
+    "MOVIEFLIX_LLM_API_KEY",
+    "MOVIEFLIX_LLM_MODEL",
+    "MOVIEFLIX_LLM_BASE_URL",
+    "MOVIEFLIX_LLM_PROVIDER",
+}
 
 
 def _local_settings() -> bool:
@@ -57,6 +71,25 @@ def _validate_destination(config: ModelConfig) -> None:
             "En la demo pública usa una de las URLs API indicadas. "
             "Los servidores locales y endpoints personalizados se configuran al ejecutar la app en tu equipo."
         )
+
+
+def server_default_config() -> ModelConfig | None:
+    """Carga el perfil de demo sin permitir que variables cambien su destino o protocolo."""
+    if _local_settings() or not any(name in os.environ for name in SERVER_ENV_NAMES):
+        return None
+    api_key = os.environ.get("MOVIEFLIX_LLM_API_KEY", "").strip()
+    provider = os.environ.get("MOVIEFLIX_LLM_PROVIDER", SERVER_PROVIDER).strip()
+    base_url = os.environ.get("MOVIEFLIX_LLM_BASE_URL", SERVER_BASE_URL).strip().rstrip("/")
+    model = os.environ.get("MOVIEFLIX_LLM_MODEL", SERVER_DEFAULT_MODEL).strip()
+    if not api_key:
+        raise ValueError("La API de demo está configurada sin MOVIEFLIX_LLM_API_KEY.")
+    if provider != SERVER_PROVIDER or base_url != SERVER_BASE_URL:
+        raise ValueError("La API de demo solo admite el protocolo OpenAI-compatible de Groq.")
+    if model not in SERVER_MODELS:
+        raise ValueError("MOVIEFLIX_LLM_MODEL no pertenece a la lista gratuita autorizada.")
+    config = ModelConfig(provider, base_url, model, api_key, 90, 2048, server_managed=True)
+    _validate_destination(config)
+    return config
 
 
 def _without_secret(config: ModelConfig) -> dict[str, str | int]:
@@ -131,11 +164,16 @@ def get_model_config() -> ModelConfig:
     current = st.session_state.get("model_config")
     if isinstance(current, ModelConfig):
         try:
-            validate_config(current)
+            _validate_destination(current)
         except ValueError:
             st.session_state.pop("model_config", None)
         else:
-            return current
+            if _local_settings() or (not current.server_managed and bool(current.api_key)):
+                return current
+            st.session_state.pop("model_config", None)
+    server_config = server_default_config()
+    if server_config is not None:
+        return server_config
     persisted = _load_persisted_config()
     if persisted is not None:
         return persisted
@@ -162,14 +200,34 @@ def _candidate(
 ) -> ModelConfig:
     clean_url = base_url.strip().rstrip("/")
     same_destination = provider == current.provider and clean_url == current.base_url.rstrip("/")
-    key = api_key.strip() or (current.api_key if same_destination else "")
+    may_reuse_key = same_destination and not current.server_managed
+    key = api_key.strip() or (current.api_key if may_reuse_key else "")
     return ModelConfig(provider, clean_url, model.strip(), key, int(timeout), int(max_tokens))
 
 
+def _clear_session_model_config() -> None:
+    for key in (
+        "model_config",
+        "model_provider",
+        "model_base_url",
+        "model_name",
+        "model_api_key",
+        "model_timeout",
+        "model_max_tokens",
+    ):
+        st.session_state.pop(key, None)
+
+
 def render_model_settings() -> None:
-    current = get_model_config()
-    can_edit, access_note = _configuration_access()
     st.title("Configuración del modelo")
+    try:
+        server_config = server_default_config()
+        current = get_model_config()
+    except ValueError as error:
+        st.error(f"La configuración de la API de demo no es válida: {error}")
+        st.caption("Revisa las variables MOVIEFLIX_LLM_* del servidor.")
+        return
+    can_edit, access_note = _configuration_access()
     st.write("Conecta un servidor local o una API propia mediante uno de estos protocolos.")
     st.caption(
         "OpenAI-compatible: /chat/completions · Ollama: /api/chat · "
@@ -177,7 +235,8 @@ def render_model_settings() -> None:
     )
     if not _local_settings():
         st.info(
-            "En Render conecta tu propia API pública. El localhost de tu ordenador solo funciona "
+            "En Render puedes usar la API de la demo si está activada o conectar tu propia API pública. "
+            "El localhost de tu ordenador solo funciona "
             "cuando ejecutas MovieFlix en ese ordenador. La clave permanece en tu sesión."
         )
         st.write(
@@ -185,6 +244,14 @@ def render_model_settings() -> None:
             + ", ".join(sorted(url for urls in PUBLIC_API_BASE_URLS.values() for url in urls))
         )
     st.info(f"Activo: {PROVIDER_LABELS[current.provider]} · {current.model} · {current.base_url}")
+    if server_config is not None:
+        st.caption(
+            "API gratuita de la demo disponible. Su clave está protegida en el servidor y no "
+            "se muestra ni se copia a configuraciones personales."
+        )
+        if st.button("Usar API de la demo", disabled=current.server_managed):
+            _clear_session_model_config()
+            st.rerun()
     if not can_edit:
         st.warning("La configuración pública solo puede cambiarla el administrador. " + access_note)
 
@@ -196,15 +263,21 @@ def render_model_settings() -> None:
             index=provider_names.index(current.provider),
             format_func=PROVIDER_LABELS.get,
             disabled=not can_edit,
+            key="model_provider",
         )
-        base_url = st.text_input("URL base", value=current.base_url, disabled=not can_edit)
-        model = st.text_input("Modelo", value=current.model, disabled=not can_edit)
+        base_url = st.text_input(
+            "URL base", value=current.base_url, disabled=not can_edit, key="model_base_url"
+        )
+        model = st.text_input(
+            "Modelo", value=current.model, disabled=not can_edit, key="model_name"
+        )
         api_key = st.text_input(
             "Clave API (opcional en local)",
             type="password",
             value="",
             placeholder="Se conserva solo durante esta sesión",
             disabled=not can_edit,
+            key="model_api_key",
         )
         timeout = st.number_input(
             "Tiempo de espera (segundos)",
@@ -212,6 +285,7 @@ def render_model_settings() -> None:
             max_value=600,
             value=current.timeout,
             disabled=not can_edit,
+            key="model_timeout",
         )
         max_tokens = st.number_input(
             "Máximo de tokens de salida",
@@ -219,6 +293,7 @@ def render_model_settings() -> None:
             max_value=100_000,
             value=current.max_tokens,
             disabled=not can_edit,
+            key="model_max_tokens",
         )
         test, save = st.columns(2)
         test_connection = test.form_submit_button("Probar conexión", disabled=not can_edit)

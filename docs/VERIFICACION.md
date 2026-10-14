@@ -30,7 +30,9 @@ Ejecutar desde la raíz en PowerShell:
 .\.venv\Scripts\python.exe -m pip check
 ```
 
-Resultado del estado final de código: **143 passed in 9.20s**; Ruff check y format correctos; `pip check`: sin dependencias rotas.
+Resultado del estado final de código: **154 passed in 9.30s**; Ruff check y format correctos; `pip check`: sin dependencias rotas.
+
+Se añadió un perfil Groq compartido activable mediante secreto de Render, con destino fijo, modelos autorizados, aislamiento de la clave frente a perfiles personales y cuotas en memoria. Las pruebas usan claves ficticias y no hacen llamadas externas. La activación real está pendiente de completar el acceso a Groq y configurar su secreto; no se declara verificada la API pública todavía.
 
 La suite actual cubre:
 

@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import sqlite3
+from contextlib import nullcontext
 from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
@@ -16,6 +17,7 @@ import streamlit as st
 from analyst import AnalysisError, ask_dataset
 from assistant import respond
 from dataset import CATALOG_PATH, ROOT, export_csv, read_catalog
+from demo_access import DemoLimitError, DemoQuota
 from model_providers import ModelClient, ProviderError, is_loopback_url
 from model_settings import get_model_config, render_model_settings
 from prediction import PredictionError, run_predictions
@@ -27,6 +29,11 @@ st.set_page_config(page_title="MovieFlix · Tu catálogo", layout="wide")
 @st.cache_data
 def load_base(path: str, modified: int) -> pd.DataFrame:
     return read_catalog(Path(path))
+
+
+@st.cache_resource
+def demo_quota() -> DemoQuota:
+    return DemoQuota()
 
 
 def show_rows(rows: pd.DataFrame) -> None:
@@ -123,7 +130,19 @@ elif page in {"Chat guiado", "Chat con IA"}:
     chat_key = "guided" if guided else "ai"
     st.title("Explora con preguntas sugeridas" if guided else "Habla con tu catálogo")
     st.write("Consulta películas, estadísticas y prepara nuevas fichas.")
-    config = None if guided else get_model_config()
+    try:
+        config = None if guided else get_model_config()
+    except ValueError:
+        st.error(
+            "La API de la demo no está configurada correctamente. El administrador debe revisar los secretos de Render."
+        )
+        st.stop()
+    managed = not guided and getattr(config, "server_managed", False)
+    if managed:
+        st.caption(
+            "API gratuita de la demo activa · 2 preguntas/minuto y 30/día compartidas. "
+            "Las cuotas del proveedor también se aplican. No necesitas introducir una clave."
+        )
     needs_public_api = (
         not guided
         and os.environ.get("RENDER", "").lower() == "true"
@@ -195,7 +214,10 @@ elif page in {"Chat guiado", "Chat con IA"}:
         else:
             try:
                 with st.status("Consultando el modelo…", expanded=False) as status:
-                    with ModelClient(config) as client:
+                    with (
+                        demo_quota().reserve() if managed else nullcontext(),
+                        ModelClient(config) as client,
+                    ):
                         reply = ask_dataset(
                             prompt,
                             frame,
@@ -205,7 +227,7 @@ elif page in {"Chat guiado", "Chat con IA"}:
                             progress=lambda text: status.update(label=text),
                         )
                     status.update(label="Respuesta basada en el catálogo", state="complete")
-            except (ProviderError, AnalysisError, ValueError) as error:
+            except (ProviderError, AnalysisError, ValueError, DemoLimitError) as error:
                 st.error(str(error))
                 st.info(
                     "Revisa Configuración o inténtalo de nuevo. El Chat guiado sigue disponible."

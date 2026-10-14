@@ -32,6 +32,7 @@ class ModelConfig:
     api_key: str = field(repr=False)
     timeout: int = 90
     max_tokens: int = 1800
+    server_managed: bool = False
 
 
 def _is_loopback(hostname: str | None) -> bool:
@@ -261,6 +262,13 @@ class ModelClient:
                 "reasoning_effort": "none",
             }
             payload["reasoning_effort"] = "none"
+        elif self.config.base_url.rstrip(
+            "/"
+        ) == "https://api.groq.com/openai/v1" and self.config.model in {
+            "openai/gpt-oss-120b",
+            "openai/gpt-oss-20b",
+        }:
+            payload["reasoning_effort"] = "low"
         data = self._request("POST", "/chat/completions", payload=payload)
         try:
             return _text(data["choices"][0]["message"]["content"])
