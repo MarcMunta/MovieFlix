@@ -167,8 +167,7 @@ def _predict(payload: dict[str, str | int]) -> dict[str, dict[str, Any]]:
         result[algorithm] = {
             "prediction": str(model.predict(inputs)[0]),
             "ranking": [
-                {"Género": genre, "Probabilidad": probability}
-                for genre, probability in ranking
+                {"Género": genre, "Probabilidad": probability} for genre, probability in ranking
             ],
         }
     return _validate_result(result)

@@ -168,9 +168,7 @@ def test_actual_worker_returns_both_model_rankings_from_owned_artifact():
     }
     assert result["random_forest"]["prediction"] == "Documentary"
     assert result["random_forest"]["ranking"][0]["Género"] == "Documentary"
-    assert result["random_forest"]["ranking"][0]["Probabilidad"] == pytest.approx(
-        0.248495677122318
-    )
+    assert result["random_forest"]["ranking"][0]["Probabilidad"] == pytest.approx(0.248495677122318)
     for model_result in result.values():
         assert len(model_result["ranking"]) == 5
         probabilities = [row["Probabilidad"] for row in model_result["ranking"]]
