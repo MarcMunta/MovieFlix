@@ -50,9 +50,11 @@ El artefacto registrado contiene 19.415 ejemplos elegibles, con 11.651 en train,
 | --- | ---: | ---: |
 | Clase mayoritaria | 30,44 % | 0,0259 |
 | Árbol de Decisión | 34,20 % | 0,1521 |
-| Random Forest | 42,73 % | 0,1416 |
+| Random Forest | 42,37 % | 0,1369 |
 
-Límites: primer género listado como objetivo; clases desequilibradas; probabilidades sin calibrar; sinopsis mayoritariamente inglesas; sin evaluación específica en español; snapshot 1896–2016; altas excluidas hasta reentrenar. Random Forest obtiene más accuracy, pero el Árbol supera su F1 macro.
+Random Forest usa 160 árboles con máximo de 512 hojas. El límite responde al presupuesto operativo de Render Free, no a una selección para maximizar test. Las estructuras internas medidas ocupan 34.045.440 bytes (unos 34 MB), frente a unos 166 MB en la revisión anterior. El artefacto sin compresión permite carga `mmap`. Random Forest conserva más accuracy, pero el Árbol supera su F1 macro.
+
+El split agrupado es fijo y el conjunto test ya se consultó en revisiones anteriores. Por ello, el resultado actual no es una nueva evaluación ciega. Límites restantes: primer género listado como objetivo; clases desequilibradas; probabilidades sin calibrar; sinopsis mayoritariamente inglesas; sin evaluación específica en español; snapshot 1896–2016; altas excluidas hasta reentrenar.
 
 ## Evidencia funcional del Chat con IA
 
@@ -82,6 +84,7 @@ Los nombres reflejan literalmente el snapshot histórico. Esta evidencia cubre e
 ## Pendientes que no deben declararse superados sin evidencia
 
 - Servicio Free [movieflix-marcm.onrender.com](https://movieflix-marcm.onrender.com): health HTTP 200 `ok`, arranque Linux y chat guiado en navegador comprobados. El test de modelo en la instancia verifica si cabe en sus 512 MB; no es una prueba de carga multiusuario.
+- En la revisión anterior, abrir predicción coincidió con timeout del health check y reinicio. No hubo señal explícita de OOM, por lo que no se atribuye una causa cerrada. La combinación candidata —bosque reducido, artefacto `mmap` y predicción aislada en subproceso— espera despliegue y QA públicos.
 - Chat con IA en Render: requiere una API propia de la allowlist y clave de sesión; un modelo local del PC no es accesible mediante `localhost` desde la nube.
 - Persistencia Render: requiere variante de pago, disco montado, secreto configurado y prueba guardar–reiniciar–recuperar.
 - Auditoría completa con lector de pantalla, carga multiusuario y controles de producción como cuentas, cuotas y trazabilidad.

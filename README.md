@@ -94,15 +94,19 @@ El objetivo es el primer género listado, no una etiqueta editorial de género p
 | --- | ---: | ---: |
 | Clase mayoritaria | 30,44 % | 0,0259 |
 | Árbol de Decisión | 34,20 % | 0,1521 |
-| Random Forest, 160 árboles | 42,73 % | 0,1416 |
+| Random Forest, 160 árboles | 42,37 % | 0,1369 |
 
 Random Forest mejora el acierto global, pero el rendimiento equilibrado por clase sigue siendo bajo. Las probabilidades no están calibradas, el catálogo termina en 2016 y no existe evaluación específica para sinopsis en español. Es una demostración educativa, no un recomendador de precisión garantizada.
+
+El bosque limita cada árbol a 512 hojas por presupuesto operativo de Render Free. Las estructuras de sus árboles ocupan aproximadamente 34 MB frente a unos 166 MB en la versión anterior. El artefacto se guarda sin compresión para permitir carga con `mmap` y reducir el pico de CPU. Este límite se eligió por memoria y operación, no para maximizar la métrica. El split sigue siendo el mismo y su test ya se había consultado en revisiones anteriores: estas cifras describen la configuración actual, pero no constituyen una nueva evaluación ciega.
 
 ## Render
 
 `render.yaml` define una demo Free en modo cloud y solo lectura para las altas. Chat guiado, catálogo y predicción no necesitan API. Chat con IA no funciona con el valor local predeterminado: el `localhost` de Render pertenece al contenedor y no puede alcanzar llama.cpp, LM Studio u Ollama ejecutados en el PC. Cada usuario sí puede conectar durante su sesión una API pública de la lista permitida; su clave y preferencias no se persisten.
 
 `render-persistent.yaml` añade un servicio de pago, disco `/var/data` y contraseña de edición para guardar altas. No es necesario para configurar el Chat con IA por sesión. El servicio Free [movieflix-marcm.onrender.com](https://movieflix-marcm.onrender.com) está desplegado y responde al health check público.
+
+En una revisión pública anterior, abrir la pestaña de predicción coincidió con timeout del health check y reinicio del servicio; Render no aportó una señal explícita de OOM. El artefacto reducido y una ejecución de predicción aislada en subproceso forman la corrección candidata. Quedan pendientes despliegue y QA públicos antes de declararla resuelta.
 
 ## Consultas IA comprobadas
 

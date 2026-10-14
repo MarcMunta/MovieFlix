@@ -98,6 +98,7 @@ def train(catalog: Path, output: Path, trees: int = 160, include_additions: bool
             RandomForestClassifier(
                 n_estimators=trees,
                 max_depth=80,
+                max_leaf_nodes=512,
                 max_features="sqrt",
                 min_samples_leaf=1,
                 bootstrap=True,
@@ -142,10 +143,15 @@ def train(catalog: Path, output: Path, trees: int = 160, include_additions: bool
         "excluded_rows": len(raw) - len(work),
         "random_state": 42,
         "split": "60/20/20 train/validación/test agrupado por título/año; sinopsis deduplicadas",
-        "evaluation_note": "El 20% inicial diagnosticó subajuste. Test final reservado dentro del 80% restante, sin usarlo para elegir parámetros.",
+        "evaluation_note": "Split agrupado fijo. Límite de 512 hojas por árbol elegido por presupuesto operativo de Render Free; no por maximizar la métrica de test. Test ya consultado en revisiones anteriores, no es una nueva evaluación ciega.",
         "group_overlap": 0,
         "preprocessing_fit": "solo train",
         "trees": trees,
+        "max_leaf_nodes": 512,
+        "tree_memory_bytes": sum(
+            t.tree_.__getstate__()["nodes"].nbytes + t.tree_.__getstate__()["values"].nbytes
+            for t in forest.estimators_
+        ),
         "class_distribution": {k: int(v) for k, v in work.target.value_counts().items()},
         "metrics": scores,
         "oob_accuracy": float(forest.oob_score_),
@@ -167,7 +173,8 @@ def train(catalog: Path, output: Path, trees: int = 160, include_additions: bool
     }
     output.parent.mkdir(parents=True, exist_ok=True)
     temporary = output.with_suffix(".tmp")
-    joblib.dump(artifact, temporary, compress=3)
+    # Fast loading avoids CPU spikes/health-check starvation on Render's free CPU quota.
+    joblib.dump(artifact, temporary, compress=0)
     os.replace(temporary, output)
     (ROOT / "metrics.json").write_text(
         json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8"

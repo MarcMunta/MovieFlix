@@ -10,7 +10,6 @@ from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
 
-import joblib
 import pandas as pd
 import streamlit as st
 
@@ -19,6 +18,7 @@ from assistant import respond
 from dataset import CATALOG_PATH, ROOT, export_csv, read_catalog
 from model_providers import ModelClient, ProviderError, is_loopback_url
 from model_settings import get_model_config, render_model_settings
+from prediction import PredictionError, run_predictions
 from store import MovieStore, combined_catalog, validate_movie, write_access
 
 st.set_page_config(page_title="MovieFlix · Tu catálogo", layout="wide")
@@ -27,15 +27,6 @@ st.set_page_config(page_title="MovieFlix · Tu catálogo", layout="wide")
 @st.cache_data
 def load_base(path: str, modified: int) -> pd.DataFrame:
     return read_catalog(Path(path))
-
-
-@st.cache_resource
-def load_model(path: str, modified: int) -> dict:
-    # Solo nuestro artefacto local: no aceptar joblib/pickle subidos por usuarios.
-    artifact = joblib.load(path)
-    if not {"decision_tree", "random_forest", "metadata"} <= artifact.keys():
-        raise ValueError("El modelo tiene un formato inesperado. Reentrena con train.py.")
-    return artifact
 
 
 def show_rows(rows: pd.DataFrame) -> None:
@@ -377,11 +368,12 @@ elif page == "Modelo":
         st.warning("Falta el modelo. Ejecuta python train.py. El resto de la app sigue disponible.")
         st.stop()
     try:
-        artifact = load_model(str(model_path), model_path.stat().st_mtime_ns)
+        metadata = json.loads((ROOT / "metrics.json").read_text(encoding="utf-8"))
+        if not {"metrics", "trees", "train_rows", "test_rows"} <= metadata.keys():
+            raise ValueError("Métricas incompletas.")
     except (OSError, ValueError, KeyError):
-        st.error("No se pudo cargar el modelo. Reentrena con las dependencias del proyecto.")
+        st.error("No se pudieron cargar las métricas. Reentrena con las dependencias del proyecto.")
         st.stop()
-    metadata = artifact["metadata"]
     st.caption(
         "Objetivo: primer género del registro. Sinopsis en inglés para mejor compatibilidad."
     )
@@ -395,23 +387,29 @@ elif page == "Modelo":
         if len(synopsis.strip()) < 15:
             st.error("Escribe una sinopsis de al menos 15 caracteres.")
         else:
-            inputs = pd.DataFrame([{"plot": synopsis, "year": pred_year, "runtime": pred_runtime}])
-            for column, name, label in zip(
-                st.columns(2),
-                ["decision_tree", "random_forest"],
-                ["Árbol de Decisión", "Random Forest"],
-                strict=True,
-            ):
-                model = artifact[name]
-                probabilities = model.predict_proba(inputs)[0]
-                ranking = pd.DataFrame({"Género": model.classes_, "Probabilidad": probabilities})
-                ranking = ranking.sort_values("Probabilidad", ascending=False).head(5)
-                column.subheader(label)
-                column.write(f"Predicción: {model.predict(inputs)[0]}")
-                column.dataframe(ranking, hide_index=True, width="stretch")
-            st.caption(
-                "Probabilidades sin calibrar; predicción orientativa, no información confirmada."
-            )
+            try:
+                with st.spinner("Comparando modelos…"):
+                    predictions = run_predictions(
+                        {"plot": synopsis, "year": pred_year, "runtime": pred_runtime}
+                    )
+            except (ValueError, PredictionError) as error:
+                st.error(str(error))
+            else:
+                for column, name, label in zip(
+                    st.columns(2),
+                    ["decision_tree", "random_forest"],
+                    ["Árbol de Decisión", "Random Forest"],
+                    strict=True,
+                ):
+                    result = predictions[name]
+                    column.subheader(label)
+                    column.write(f"Predicción: {result['prediction']}")
+                    column.dataframe(
+                        pd.DataFrame(result["ranking"]), hide_index=True, width="stretch"
+                    )
+                st.caption(
+                    "Probabilidades sin calibrar; predicción orientativa, no información confirmada."
+                )
     st.subheader("Evaluación con películas no vistas")
     rows = []
     for name, label in (
@@ -430,6 +428,7 @@ elif page == "Modelo":
     )
     with st.expander("Método, resultados y límites"):
         st.write(metadata["split"])
+        st.write(metadata["evaluation_note"])
         for limitation in metadata["limitations"]:
             st.write(limitation)
         st.write(
